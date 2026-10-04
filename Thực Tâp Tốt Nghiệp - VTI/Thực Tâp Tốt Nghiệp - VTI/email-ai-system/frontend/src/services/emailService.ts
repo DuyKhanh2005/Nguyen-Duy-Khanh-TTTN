@@ -1,0 +1,56 @@
+import { api } from './api';
+import { EmailItem } from '../types/email';
+
+// Interface cho Response gửi email phản hồi
+export interface SendReplyPayload {
+    to: string;
+    subject: string;
+    replyContent: string;
+    emailId?: string;
+}
+
+//Lấy danh sách Email thuộc về User đang đăng nhập
+
+export const getEmails = async (): Promise<EmailItem[]> => {
+    const response = await api.get<EmailItem[]>('/emails');
+    return response.data;
+};
+
+
+// Kích hoạt đồng bộ Email từ Server
+//Backend sẽ trả về danh sách email mới sau khi đồng bộ
+ 
+export const syncEmails = async (): Promise<EmailItem[]> => {
+    const response = await api.post<{ message: string; data: EmailItem[] }>('/emails/sync');
+    // Trả về trực tiếp mảng Email để Frontend cập nhật State ngay lập tức
+    return response.data.data;
+};
+
+// Cập nhật trạng thái Email (Pending, Resolved, SpamTrash...)
+
+export const updateEmailStatus = async (id: string, status: string): Promise<EmailItem> => {
+    const response = await api.patch<EmailItem>(`/emails/${id}/status`, { status });
+    return response.data;
+};
+
+// Gửi email phản hồi
+
+export const sendReplyEmail = async (payload: SendReplyPayload): Promise<{ message: string }> => {
+    const response = await api.post<{ message: string }>('/emails/send-reply', payload);
+    return response.data;
+};
+
+// Hàm gọi API lấy gợi ý phản hồi từ AI
+export const getQuickRepliesFromAI = async (subject: string, content: string, category?: string) => {
+  try {
+    const response = await api.post('/emails/quick-replies', {
+      subject,
+      content,
+      category: category || 'General'
+    });
+    return response.data.suggestions; 
+  } catch (error) {
+    console.error("Lỗi khi gọi AI Quick Replies:", error);
+    throw error;
+  }
+};
